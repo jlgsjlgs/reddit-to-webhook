@@ -94,24 +94,30 @@ class Reddit:
     
     def checkPosts(self, last_checked_timestamp):
         stk = []
-        subreddit = self.connection.subreddit("HonkaiStarRail_leaks")
         latest = None
-
-        for submission in subreddit.new():
-            if submission.created_utc > last_checked_timestamp:
-                stk.append(submission)
-                if not latest or submission.created_utc > latest:
-                    latest = submission.created_utc
-            else:
-                break
-        
-        if not stk:
+    
+        try:
+            subreddit = self.connection.subreddit("HonkaiStarRail_leaks")
+            for submission in subreddit.new():
+                if submission.created_utc > last_checked_timestamp:
+                    stk.append(submission)
+                    if not latest or submission.created_utc > latest:
+                        latest = submission.created_utc
+                else:
+                    break
+        except Exception as e:
+            logging.error(f"Error fetching posts from subreddit: {e}")
             return None
         
+        if not stk:
+            logging.info("No new posts found")
+            return None
+        
+        # Send posts to Discord (Discord.send handles its own error logging)
         while stk:
             post = stk.pop()
             self.discord.send(post.title, post.url)
-
+    
         return datetime.fromtimestamp(latest, tz=timezone.utc)
 
 if __name__ == "__main__":
